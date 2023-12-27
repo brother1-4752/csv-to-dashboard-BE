@@ -10,7 +10,7 @@ const fs = require("fs");
 
 const app = express();
 const port = 3000;
-const DELAY_TIME = 1 * 60 * 1000; // 1분
+const DELAY_TIME = 5 * 60 * 1000; // 1분
 
 const uploadDir = path.join(__dirname, "../uploads"); // uploads 디렉토리 경로 설정
 
@@ -24,7 +24,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage: storage });
-
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
