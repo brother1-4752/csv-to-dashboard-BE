@@ -29,60 +29,78 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.post("/upload", upload.array("files"), async (req, res) => {
-  const files = req.files;
+  const fileList = req.files;
+  const userId = req.body.userId;
 
-  if (!files || files.length === 0) {
+  let results = [];
+  let totalString = "";
+
+  if (!fileList || fileList.length === 0)
     return res.status(400).json({ error: "파일 업로드 안됨." });
-  }
 
-  const results = [];
+  const createTotalString = async () => {
+    try {
+      await Promise.all(
+        Array.from(fileList).map(async (csvFile) => {
+          const fileContent = await fs.readFile(csvFile.path);
 
-  const processFile = (file, callback) => {
-    const parser = csvParser({
-      headers: false,
-    });
-
-    fs.createReadStream(file.path)
-      .pipe(parser)
-      .on("data", (record) => {
-        results.push(Object.values(record));
-      })
-      .on("end", () => {
-        callback();
-      })
-      .on("error", (error) => {
-        console.error("Error reading/parsing file:", error);
-        callback(error);
-      });
+          // const lines = fileContent.toString().split("\n");
+        })
+      );
+    } catch (err) {
+      console.log(err);
+    }
   };
+  await createTotalString();
 
-  // 각 파일을 처리하는 Promise를 생성
-  const fileProcessingPromises = files.map((file) => {
-    return new Promise((resolve, reject) => {
-      processFile(file, (error) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve();
-        }
-      });
-    });
-  });
+  res.json({ results: fileContent, userId });
 
-  // 모든 파일 처리가 완료되면 결과를 반환
-  Promise.all(fileProcessingPromises)
-    .then(() => {
-      try {
-        res.json(results);
-      } catch (err) {
-        console.error("Error converting data to JSON:", err);
-        res.status(500).json({ error: "Internal server error" });
-      }
-    })
-    .catch((error) => {
-      console.error("Error processing files:", error);
-      res.status(500).json({ error: "Internal server error" });
-    });
+  // const processFile = (file, callback) => {
+  //   const parser = csvParser({
+  //     headers: false,
+  //   });
+
+  //   fs.createReadStream(file.path)
+  //     .pipe(parser)
+  //     .on("data", (record) => {
+  //       results.push(Object.values(record));
+  //     })
+  //     .on("end", () => {
+  //       callback();
+  //     })
+  //     .on("error", (error) => {
+  //       console.error("Error reading/parsing file:", error);
+  //       callback(error);
+  //     });
+  // };
+
+  // // 각 파일을 처리하는 Promise를 생성
+  // const fileProcessingPromises = files.map((file) => {
+  //   return new Promise((resolve, reject) => {
+  //     processFile(file, (error) => {
+  //       if (error) {
+  //         reject(error);
+  //       } else {
+  //         resolve();
+  //       }
+  //     });
+  //   });
+  // });
+
+  // // 모든 파일 처리가 완료되면 결과를 반환
+  // Promise.all(fileProcessingPromises)
+  //   .then(() => {
+  //     try {
+  //       res.json(results);
+  //     } catch (err) {
+  //       console.error("Error converting data to JSON:", err);
+  //       res.status(500).json({ error: "Internal server error" });
+  //     }
+  //   })
+  //   .catch((error) => {
+  //     console.error("Error processing files:", error);
+  //     res.status(500).json({ error: "Internal server error" });
+  //   });
 });
 
 // 주기적인 파일 삭제 태스크
@@ -105,7 +123,7 @@ setInterval(() => {
   };
 
   clearUploadsDir();
-}, DELAY_TIME); // 1분 간격으로 실행
+}, DELAY_TIME); // 개발 환경에선 1분 간격으로 실행
 
 app.listen(port, () => {
   console.log(`heurm server is listening to port ${port}`);
