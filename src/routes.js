@@ -3,6 +3,8 @@ const multer = require("multer");
 const csvParser = require("csv-parser");
 const fs = require("fs");
 const path = require("path");
+const AmplitudeColumns = require("./types/amplitudeColumnList");
+const appsFlyerColumns = require("./types/appsFlyerColumnList");
 
 const router = express.Router();
 const UPLOAD_DIR = path.join("uploads");
@@ -129,15 +131,31 @@ router.post("/processing", async (req, res) => {
 // 검색 API 구현
 router.post("/search", (req, res) => {
   const userId = req.body.userId;
-  const appsKey = "customer_user_id";
-  const amplKey = "user_id";
 
   const filteredData = processedData.filter((data) => {
     return data["customer_user_id"] === userId || data["user_id"] === userId;
   });
 
+  const mergedData = filteredData.map((data) => {
+    if (data["customer_user_id"]) {
+      //앱스플라이어 데이터
+      const mergedWithAmplitude = { ...AmplitudeColumns, ...data };
+      return mergedWithAmplitude;
+    } else if (data["user_id"]) {
+      // 앰플리튜드 데이터
+      const mergedWithAppsFlyer = { ...data, ...appsFlyerColumns };
+      return mergedWithAppsFlyer;
+    } else {
+      //그 외 데이터
+      res.json({
+        message:
+          "파일에 앱스플라이어나 앰플리튜드가 아닌 것이 포함되어 있습니다.",
+      });
+    }
+  });
+
   console.log("검색 완료");
-  res.json({ filteredData });
+  res.json({ mergedData });
 });
 
 module.exports = router;
