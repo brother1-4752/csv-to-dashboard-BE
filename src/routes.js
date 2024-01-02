@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const AmplitudeColumns = require("./types/amplitudeColumnList");
 const appsFlyerColumns = require("./types/appsFlyerColumnList");
+const duplicatedHeaderKeys = require("./types/duplicatedHeaderKeys");
 
 const router = express.Router();
 const UPLOAD_DIR = path.join("uploads");
@@ -132,18 +133,35 @@ router.post("/processing", async (req, res) => {
 router.post("/search", (req, res) => {
   const userId = req.body.userId;
 
+  //유저아이디와 일치하는 앱스플라이어 또는 앰플리튜드 데이터만 필터링
   const filteredData = processedData.filter((data) => {
     return data["customer_user_id"] === userId || data["user_id"] === userId;
   });
 
-  const mergedData = filteredData.map((data) => {
+  //중복 헤더 컬럼값 유니크값으로 변환
+  const dataRemovedDuplicatedHeaderKeys = filteredData.map((data) => {
+    let refinedData = {};
+
+    for (const key in data) {
+      const newKey =
+        duplicatedHeaderKeys.indexOf(key) !== -1 ? key + "__apps" : key;
+      refinedData[newKey] = data[key];
+    }
+
+    return refinedData;
+  });
+
+  // 각각 앰플 또는 앱스 객체를 병합하는 로직
+  const mergedData = dataRemovedDuplicatedHeaderKeys.map((data) => {
     if (data["customer_user_id"]) {
       //앱스플라이어 데이터
-      const mergedWithAmplitude = { ...AmplitudeColumns, ...data };
+      const mergedWithAmplitude = { data, ...AmplitudeColumns };
+      // const mergedWithAmplitude = { ...data };
       return mergedWithAmplitude;
     } else if (data["user_id"]) {
       // 앰플리튜드 데이터
-      const mergedWithAppsFlyer = { ...data, ...appsFlyerColumns };
+      const mergedWithAppsFlyer = { ...appsFlyerColumns, data };
+      // const mergedWithAppsFlyer = { ...data };
       return mergedWithAppsFlyer;
     } else {
       //그 외 데이터
