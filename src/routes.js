@@ -135,45 +135,64 @@ router.post("/search", (req, res) => {
 
   //유저아이디와 일치하는 앱스플라이어 또는 앰플리튜드 데이터만 필터링
   const filteredData = processedData.filter((data) => {
-    return data["customer_user_id"] === userId || data["user_id"] === userId;
+    if (data["customer_user_id"]) {
+      return data["customer_user_id"] === userId;
+    }
+
+    if (data["user_id"]) {
+      return data["user_id"] === userId;
+    }
+
+    return false;
   });
 
   //중복 헤더 컬럼값 유니크값으로 변환
   const dataRemovedDuplicatedHeaderKeys = filteredData.map((data) => {
     let refinedData = {};
+    //앱스플라이어 데이터
+    if (data["customer_user_id"]) {
+      refinedData["tool_type"] = "appsFlyer";
+      for (const key in data) {
+        const newKey =
+          duplicatedHeaderKeys.indexOf(key) !== -1 ? key + "__apps" : key;
+        refinedData[newKey] = data[key];
+      }
+    }
 
-    for (const key in data) {
-      const newKey =
-        duplicatedHeaderKeys.indexOf(key) !== -1 ? key + "__apps" : key;
-      refinedData[newKey] = data[key];
+    //앰플리튜드 데이터
+    if (data["user_id"]) {
+      refinedData["tool_type"] = "amplitude";
+      for (const key in data) {
+        refinedData[key] = data[key];
+      }
     }
 
     return refinedData;
   });
 
   // 각각 앰플 또는 앱스 객체를 병합하는 로직
-  const mergedData = dataRemovedDuplicatedHeaderKeys.map((data) => {
-    if (data["customer_user_id"]) {
-      //앱스플라이어 데이터
-      const mergedWithAmplitude = { data, ...AmplitudeColumns };
-      // const mergedWithAmplitude = { ...data };
-      return mergedWithAmplitude;
-    } else if (data["user_id"]) {
-      // 앰플리튜드 데이터
-      const mergedWithAppsFlyer = { ...appsFlyerColumns, data };
-      // const mergedWithAppsFlyer = { ...data };
-      return mergedWithAppsFlyer;
-    } else {
-      //그 외 데이터
-      res.json({
-        message:
-          "파일에 앱스플라이어나 앰플리튜드가 아닌 것이 포함되어 있습니다.",
-      });
-    }
-  });
+  // const mergedData = dataRemovedDuplicatedHeaderKeys.map((data) => {
+  //   if (data["customer_user_id"]) {
+  //     //앱스플라이어 데이터
+  //     const mergedWithAmplitude = { data, ...AmplitudeColumns };
+  //     // const mergedWithAmplitude = { ...data };
+  //     return mergedWithAmplitude;
+  //   } else if (data["user_id"]) {
+  //     // 앰플리튜드 데이터
+  //     const mergedWithAppsFlyer = { ...appsFlyerColumns, data };
+  //     // const mergedWithAppsFlyer = { ...data };
+  //     return mergedWithAppsFlyer;
+  //   } else {
+  //     //그 외 데이터
+  //     res.json({
+  //       message:
+  //         "파일에 앱스플라이어나 앰플리튜드가 아닌 것이 포함되어 있습니다.",
+  //     });
+  //   }
+  // });
 
   console.log("검색 완료");
-  res.json({ mergedData });
+  res.json({ list : dataRemovedDuplicatedHeaderKeys });
 });
 
 module.exports = router;
