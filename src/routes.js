@@ -3,8 +3,6 @@ const multer = require("multer");
 const csvParser = require("csv-parser");
 const fs = require("fs");
 const path = require("path");
-const AmplitudeColumns = require("./types/amplitudeColumnList");
-const appsFlyerColumns = require("./types/appsFlyerColumnList");
 const duplicatedHeaderKeys = require("./types/duplicatedHeaderKeys");
 
 const router = express.Router();
@@ -163,7 +161,9 @@ router.post("/search", (req, res) => {
     if (data["user_id"]) {
       refinedData["tool_type"] = "amplitude";
       for (const key in data) {
-        refinedData[key] = data[key];
+        const newKey =
+          duplicatedHeaderKeys.indexOf(key) !== -1 ? key + "__ampl" : key;
+        refinedData[newKey] = data[key];
       }
     }
 
@@ -192,7 +192,7 @@ router.post("/search", (req, res) => {
   // });
 
   console.log("검색 완료");
-  res.json({ list : dataRemovedDuplicatedHeaderKeys });
+  res.json({ list: dataRemovedDuplicatedHeaderKeys });
 });
 
 module.exports = router;
