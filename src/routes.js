@@ -31,7 +31,7 @@ const clearUploadsDir = () => {
       const filePath = path.join(UPLOAD_DIR, file);
       fs.unlinkSync(filePath);
     });
-    console.log("Uploads 디렉토리 초기화 완료.");
+    console.log("Uploads 디렉토리 초기화 완료✅");
   } catch (error) {
     console.error("Uploads 디렉토리 초기화 오류:", error);
   }
@@ -44,7 +44,7 @@ router.post("/upload", upload.array("files", 500), (req, res) => {
   if (fileList.length > 0) fileList = [];
 
   fileList = Array.from(req.files);
-  console.log("파일 업로드 완료");
+  console.log("파일 업로드 완료", new Date());
   res.json({ fileList });
 });
 
@@ -114,7 +114,7 @@ router.post("/processing", async (req, res) => {
   Promise.all(fileProcessingPromises)
     .then(() => {
       try {
-        console.log("파일 처리 완료");
+        console.log("파일 처리 완료", new Date());
         res.json(processedData);
       } catch (err) {
         console.error("Error converting data to JSON:", err);
@@ -130,18 +130,22 @@ router.post("/processing", async (req, res) => {
 // 검색 API 구현
 router.post("/search", (req, res) => {
   const userId = req.body.userId;
+  const filterType = req.body.filterType;
 
   //유저아이디와 일치하는 앱스플라이어 또는 앰플리튜드 데이터만 필터링
   const filteredData = processedData.filter((data) => {
-    if (data["customer_user_id"]) {
-      return data["customer_user_id"] === userId;
-    }
+    //필터 타입이 유저 아이디인 케이스
+    if (filterType === "userId") {
+      if (data["customer_user_id"]) {
+        return data["customer_user_id"] === userId;
+      }
 
-    if (data["user_id"]) {
-      return data["user_id"] === userId;
-    }
+      if (data["user_id"]) {
+        return data["user_id"] === userId;
+      }
 
-    return false;
+      return false;
+    }
   });
 
   //중복 헤더 컬럼값 유니크값으로 변환
@@ -191,7 +195,7 @@ router.post("/search", (req, res) => {
   //   }
   // });
 
-  console.log("검색 완료");
+  console.log("검색 완료", new Date());
   res.json({ list: dataRemovedDuplicatedHeaderKeys });
 });
 
