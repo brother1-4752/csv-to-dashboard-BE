@@ -1,4 +1,5 @@
 const express = require("express");
+const testController = require("./controllers/testController");
 const multer = require("multer");
 const csvParser = require("csv-parser");
 const fs = require("fs");
@@ -198,5 +199,8 @@ router.post("/search", (req, res) => {
   console.log("검색 완료", new Date());
   res.json({ list: dataRemovedDuplicatedHeaderKeys });
 });
+
+// db 조회 테스트 API 구현
+router.get("/test", testController.getTestDataController);
 
 module.exports = router;
