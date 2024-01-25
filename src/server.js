@@ -13,6 +13,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/api", routes);
 
 db.on("error", console.error.bind(console, "connection error:"));
-db.once("open", async () => console.log("DB connected!"));
+db.once("open", () => console.log("DB connected!"));
 
 module.exports = app;
