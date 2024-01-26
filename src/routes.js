@@ -52,10 +52,14 @@ router.post("/search", async (req, res) => {
 
     console.time("검색 시간");
     for (const collectionName of filteredCollectionsNameList) {
+    // for (const collectionName of ["t_amplitude_h"]) {
       if (collectionName) {
         const docCounts = await db.collection(collectionName).countDocuments();
 
-        if (docCounts === 0) continue;
+        if (docCounts === 0) {
+          console.log(collectionName);
+          continue;
+        }
 
         console.log(collectionName, "검색 시작", new Date());
         console.log(collectionName, "총 문서 수", docCounts);
