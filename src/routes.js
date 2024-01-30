@@ -8,6 +8,8 @@ let columnFlagList = [];
 
 // 검색 API 구현
 router.post("/search", async (req, res) => {
+  // 인덱스 생성
+
   // 검색 조건에 따라 쿼리 생성
   const createQuery = () => {
     const query = {};
@@ -33,16 +35,16 @@ router.post("/search", async (req, res) => {
       query.productNo = req.body.productNo;
     }
 
-    query.$and = [
-      
-    ]
-
     return query;
   };
 
   const query = createQuery();
   console.log("쿼리 : ", query);
   const serviceName = req.body.serviceName;
+  const userId = req.body.userId;
+  const session_id = req.body.session_id;
+  const productName = req.body.productName;
+  const productNo = req.body.productNo;
 
   if (columnsList.length > 0) {
     console.log("컬럼 비우기 완료");
@@ -88,15 +90,18 @@ router.post("/search", async (req, res) => {
     console.log(filteredCollectionsNameList);
 
     console.time("검색 시간");
-    for (const collectionName of filteredCollectionsNameList) {
-      // for (const collectionName of ["t_inapps_b"]) {
+    // for (const collectionName of filteredCollectionsNameList) {
+    for (const collectionName of [
+      "t_sessions_retargeting_b",
+      "t_conversions_retargeting_h",
+      "t_sessions_h",
+      "t_installs_h",
+      "t_inapps_h",
+    ]) {
       if (collectionName) {
         const docCounts = await db.collection(collectionName).countDocuments();
 
-        if (docCounts === 0) {
-          console.log(collectionName);
-          continue;
-        }
+        if (docCounts === 0) continue;
 
         console.log(collectionName, "검색 시작", new Date());
         console.log(collectionName, "총 문서 수", docCounts);
@@ -106,8 +111,11 @@ router.post("/search", async (req, res) => {
 
         const result = await db
           .collection(collectionName)
-          .find(query)
-          .sort({ event_time_kst: -1 })
+          // .find({
+          //   $or: [{ user_id: userId }, { customer_user_id: userId }],
+          // })
+          .find({ $or: [{ user_id: "413018", customer_user_id: "413018" }] })
+          .limit(1)
           .toArray();
         filteredDataList.push(...result);
 
