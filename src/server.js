@@ -1,9 +1,10 @@
 // cors, body-parser 설정
 const bodyParser = require("body-parser");
-const routes = require("./routes");
 const express = require("express");
-const db = require("./doc-db");
 const cors = require("cors");
+
+const routes = require("./routes");
+const db = require("./doc-db");
 
 const app = express();
 

@@ -4,52 +4,38 @@ const db = require("./doc-db");
 const router = express.Router();
 let filteredDataList = [];
 let columnsList = [];
-let columnFlagList = [];
+
+const fetchDocuments = async (db, collectionName, query) => {
+  let documents = [];
+  let cursor = db.collection(collectionName).find(query).batchSize(1000);
+
+  while (await cursor.hasNext()) {
+    const batchDocuments = await cursor.next();
+    documents = documents.concat(batchDocuments);
+
+    if (documents.length >= 1000) {
+      break;
+    }
+  }
+
+  return documents;
+};
 
 // 검색 API 구현
 router.post("/search", async (req, res) => {
-  // 인덱스 생성
-
-  // 검색 조건에 따라 쿼리 생성
-  const createQuery = () => {
-    const query = {};
-
-    if (req.body.userId.length > 0) {
-      query.$or = [
-        {
-          user_id: req.body.userId,
-          customer_user_id: req.body.userId,
-        },
-      ];
-    }
-
-    if (req.body.session_id.length > 0) {
-      query.session_id = req.body.session_id;
-    }
-
-    if (req.body.productName.length > 0) {
-      query.productName = req.body.productName;
-    }
-
-    if (req.body.productNo.length > 0) {
-      query.productNo = req.body.productNo;
-    }
-
-    return query;
-  };
-
-  const query = createQuery();
-  console.log("쿼리 : ", query);
   const serviceName = req.body.serviceName;
   const userId = req.body.userId;
-  const session_id = req.body.session_id;
-  const productName = req.body.productName;
-  const productNo = req.body.productNo;
+  const sessionId = req.body.session_id;
+  const targetDate = req.body.targetDate;
 
   if (columnsList.length > 0) {
     console.log("컬럼 비우기 완료");
     columnsList = [];
-    columnFlagList = [];
+  }
+
+  if (filteredDataList.length > 0) {
+    console.log("데이터 비우기 완료");
+    filteredDataList = [];
   }
 
   const collectionTypes = [
@@ -63,12 +49,6 @@ router.post("/search", async (req, res) => {
     columns = await db.collection(type).findOne();
     console.log(type, "컬럼수", Object.keys(columns).length);
     columnsList.push(...Object.keys(columns));
-    columnFlagList.push(Object.keys(columns)[0]);
-  }
-
-  if (filteredDataList.length > 0) {
-    console.log("데이터 비우기 완료");
-    filteredDataList = [];
   }
 
   const collections = await db.db.listCollections().toArray();
@@ -90,14 +70,7 @@ router.post("/search", async (req, res) => {
     console.log(filteredCollectionsNameList);
 
     console.time("검색 시간");
-    // for (const collectionName of filteredCollectionsNameList) {
-    for (const collectionName of [
-      "t_sessions_retargeting_b",
-      "t_conversions_retargeting_h",
-      "t_sessions_h",
-      "t_installs_h",
-      "t_inapps_h",
-    ]) {
+    for (const collectionName of filteredCollectionsNameList) {
       if (collectionName) {
         const docCounts = await db.collection(collectionName).countDocuments();
 
@@ -107,17 +80,20 @@ router.post("/search", async (req, res) => {
         console.log(collectionName, "총 문서 수", docCounts);
 
         // 디비 내 컬렉션 순회하고 유저 아이디와 일치하는 데이터 읽어온 후
-        // event_time 기준으로 정렬 후 변수화
+        (async () => {
+          const query = {
+            $or: [{ user_id: userId }, { customer_user_id: userId }],
+            session_id: sessionId,
+            $and: [
+              { event_time_kst: { $gte: `${targetDate} 00:00:00` } },
+              { event_time_kst: { $lte: `${targetDate} 23:59:59` } },
+            ],
+          };
 
-        const result = await db
-          .collection(collectionName)
-          // .find({
-          //   $or: [{ user_id: userId }, { customer_user_id: userId }],
-          // })
-          .find({ $or: [{ user_id: "413018", customer_user_id: "413018" }] })
-          .limit(1)
-          .toArray();
-        filteredDataList.push(...result);
+          const result = await fetchDocuments(db, collectionName, query);
+
+          filteredDataList.push(...result);
+        })();
 
         console.log(collectionName, "검색 종료", new Date());
       }
@@ -128,7 +104,7 @@ router.post("/search", async (req, res) => {
   }
   console.timeEnd("검색 시간");
 
-  res.json({ dataList: filteredDataList, columnsList, columnFlagList });
+  res.json({ dataList: filteredDataList, columnsList });
 });
 
 module.exports = router;
